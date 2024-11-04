@@ -1,12 +1,12 @@
 import { createRoot } from "react-dom/client";
 import SumViz from "../components/SumViz";
 
-function adjustContainerHeight() {
-  const containerStyle = document.querySelector(".sumviz-container");
-  if (containerStyle) {
-    containerStyle.style.maxHeight = `${window.innerHeight - 160}px`;
-  }
-}
+// function adjustContainerHeight() {
+//   const containerStyle = document.querySelector(".sumviz-container");
+//   if (containerStyle) {
+//     containerStyle.style.maxHeight = `${window.innerHeight - 160}px`;
+//   }
+// }
 
 function insertSumViz() {
   const secondary = document.getElementById("secondary");
@@ -17,10 +17,10 @@ function insertSumViz() {
 
     const root = createRoot(container);
     root.render(<SumViz />);
-    adjustContainerHeight();
+    // adjustContainerHeight();
 
     // Add resize listener
-    window.addEventListener("resize", adjustContainerHeight);
+    // window.addEventListener("resize", adjustContainerHeight);
   }
 }
 
@@ -38,7 +38,8 @@ observer.observe(document.body, {
   subtree: true,
 });
 
-// Clean up resize listener when extension is disabled/removed
+/* // Clean up resize listener when extension is disabled/removed
 window.addEventListener("unload", () => {
   window.removeEventListener("resize", adjustContainerHeight);
 });
+ */
