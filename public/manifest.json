@@ -2,11 +2,18 @@
   "manifest_version": 3,
   "version": "0.1.0",
   "name": "Sumviz",
+  "description": "Adds a rectangle next to YouTube videos",
   "action": {
     "default_popup": "index.html"
   },
-  "permissions": ["scripting"],
-  "host_permissions": ["http://*/*", "https://*/*"],
+  "permissions": ["activeTab"],
+  "content_scripts": [
+    {
+      "matches": ["https://www.youtube.com/*"],
+      "js": ["contentscript/content.js"],
+      "css": ["contentscript/style.css"]
+    }
+  ],
   "icons": {
     "128": "128.png",
     "48": "48.png",
