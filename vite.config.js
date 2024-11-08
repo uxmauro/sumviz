@@ -9,7 +9,7 @@ export default defineConfig({
     rollupOptions: {
       input: {
         // eslint-disable-next-line no-undef
-        content: resolve(__dirname, "src/content/contentScript.jsx"),
+        content: resolve(__dirname, "src/content/ContentScript.jsx"),
       },
       output: {
         entryFileNames: "contentscript/[name].js",

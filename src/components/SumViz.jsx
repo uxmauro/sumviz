@@ -1,6 +1,7 @@
 import "./Sumviz.css";
 import { useState } from "react";
 import { LucidePlus, LucideMinus } from "lucide-react";
+import ResizableColumn from "./ResizableColumn";
 
 const SumViz = () => {
   // State to control the toggle
@@ -19,6 +20,7 @@ const SumViz = () => {
           {isActive ? <LucideMinus size={20} /> : <LucidePlus size={20} />}
         </div>
       </div>
+      {isActive ? <ResizableColumn /> : ""}
     </div>
   );
 };
