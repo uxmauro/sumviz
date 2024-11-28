@@ -1,0 +1,67 @@
+.container {
+    height: 92%;
+    width: 94%;
+    margin: 1em;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    box-sizing: border-box;
+  }
+
+  .top, .bottom {
+    width: 100%;
+    background-color: lightgray;
+    box-sizing: border-box;
+    border-radius: 16px;
+    overflow-y: scroll;
+  }
+
+
+  #drag {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 2px;
+    cursor: move; /* fallback if grab cursor is unsupported */
+    cursor: grab;
+    cursor: -moz-grab;
+    cursor: -webkit-grab;
+    margin: 10px 0;
+    padding: 10px;
+  }
+
+
+  #drag:active {
+  cursor: grabbing;
+  cursor: -moz-grabbing;
+  cursor: -webkit-grabbing;
+  }
+
+  .inner-drag{
+    width: 10%;
+    height: 2px;
+    background-color: gray;
+    border-radius: 2px;
+  }
+
+
+  .inner-header{
+    position: absolute;
+    display: flex;
+    justify-content: space-between;
+    background-color: lightgray;
+    width: 85%;
+    height: fit-content;
+    padding: 12px;
+  }
+
+
+
+.transcript-result{
+  margin-top: 3rem;
+  width: 100%;
+  padding: 2em;
+  box-sizing: border-box;
+  overflow-y: auto;
+}

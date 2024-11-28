@@ -1,6 +1,6 @@
 
 .sumviz-container{
-    width: 96%;
+    width: 98%;
     height: 44px;
     padding: 2px;
     margin-bottom: 2em;
@@ -45,9 +45,4 @@
 }
 
 
-.fade-exit{
-    opacity: 0;
-    height: 0;
-    overflow: hidden;
-  }
 
