@@ -1,11 +1,13 @@
 import { useState } from "react";
 import { LucidePlus, LucideMinus } from "lucide-react";
 import "./ResizableColumn.css";
+import TranscriptContent from './TranscriptContent';
 
-const Transcript = ({ height, innerHeight, children }) => {
+
+const Transcript = ({ height, innerHeight }) => {
   const [isActive, setIsActive] = useState(false);
 
-  // Toggle function to expand or collapse the div
+
   const toggleTranscript = () => {
     setIsActive(!isActive);
   };
@@ -18,7 +20,9 @@ const Transcript = ({ height, innerHeight, children }) => {
           {isActive ? <LucidePlus size={20} /> : <LucideMinus size={20} />}
         </div>
       </div>
-      <div className="transcript-result">{children}</div>
+      <div className="transcript-result">{
+               <TranscriptContent />
+        }</div>
     </div>
   );
 };

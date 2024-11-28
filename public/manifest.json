@@ -6,7 +6,12 @@
   "action": {
     "default_popup": "index.html"
   },
-  "permissions": ["activeTab"],
+  "permissions": [  "activeTab",
+  "scripting",
+    "https://www.youtube.com/*",
+      "https://*.googlevideo.com/*"
+  ],
+
   "content_scripts": [
     {
       "matches": ["https://www.youtube.com/*"],
@@ -14,6 +19,16 @@
       "css": ["contentscript/style.css"]
     }
   ],
+  "background": {
+    "service_worker": "background.js"
+  },
+
+  "host_permissions": [
+    "https://www.youtube.com/*",
+    "https://*.googlevideo.com/*"
+  ],
+
+
   "icons": {
     "128": "128.png",
     "48": "48.png",
