@@ -2,14 +2,9 @@
   "manifest_version": 3,
   "version": "0.1.0",
   "name": "Sumviz",
-  "description": "Adds a rectangle next to YouTube videos",
-  "action": {
-    "default_popup": "index.html"
-  },
+  "description": "Get Transcripts, concise summaries and translations of YouTube videos.",
   "permissions": [  "activeTab",
-  "scripting",
-    "https://www.youtube.com/*",
-      "https://*.googlevideo.com/*"
+  "scripting"
   ],
 
   "content_scripts": [
