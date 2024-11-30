@@ -5,7 +5,7 @@ import TranscriptContent from './TranscriptContent';
 
 
 const Transcript = ({ height, innerHeight }) => {
-  const [isActive, setIsActive] = useState(false);
+  const [isActive, setIsActive] = useState(true);
 
 
   const toggleTranscript = () => {
@@ -17,11 +17,11 @@ const Transcript = ({ height, innerHeight }) => {
       <div className="inner-header" onClick={toggleTranscript}>
         <h1>Transcript</h1>
         <div className="toggleBtn">
-          {isActive ? <LucidePlus size={20} /> : <LucideMinus size={20} />}
+          {/* {isActive ? <LucidePlus size={20} /> : <LucideMinus size={20} />} */}
         </div>
       </div>
       <div className="transcript-result">{
-               <TranscriptContent />
+             <TranscriptContent />
         }</div>
     </div>
   );

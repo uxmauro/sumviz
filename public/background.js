@@ -90,14 +90,38 @@ async function getRawTranscript(link) {
     }
 }
 
+// Helper function to get video ID from a transcript link
+function getVideoIdFromLink(link) {
+    try {
+        const url = new URL(link);
+        const videoId = url.searchParams.get('v');
+        return videoId;
+    } catch (error) {
+        console.error('Error extracting video ID:', error);
+        return null;
+    }
+}
+
 async function getSmartSegments(link) {
     try {
+        const videoId = getVideoIdFromLink(link);
+        if (!videoId) {
+            throw new Error('Could not extract video ID from link');
+        }
+
+        // Check if we already have this transcript
+        const stored = await chrome.storage.local.get(`transcript_${videoId}`);
+        if (stored[`transcript_${videoId}`]) {
+            console.log('Using stored transcript');
+            return stored[`transcript_${videoId}`].segments;
+        }
+
         const rawTranscript = await getRawTranscript(link);
         console.log('Total raw transcript segments:', rawTranscript.length);
         
         // Parameters for combining segments
-        const MAX_GAP = 2.0; // Maximum gap in seconds between segments to combine
-        const TARGET_DURATION = 35.0; // Target duration for combined segments
+        const MAX_GAP = 2.0;
+        const TARGET_DURATION = 35.0;
         
         let combinedSegments = [];
         let currentChunk = null;
@@ -150,6 +174,16 @@ async function getSmartSegments(link) {
         console.log('Combined segments:', combinedSegments.length);
         console.log('Sample combined segments:', combinedSegments.slice(0, 3));
         
+        // Store the processed transcript
+        await chrome.storage.local.set({
+            [`transcript_${videoId}`]: {
+                segments: combinedSegments,
+                timestamp: Date.now(),
+                videoId: videoId,
+                fullText: combinedSegments.map(seg => seg.text).join(' ') // This will be useful for chat
+            }
+        });
+        
         return combinedSegments;
     } catch (error) {
         console.error('Error creating smart segments:', error);
@@ -170,8 +204,11 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                 case 'GET_TRANSCRIPT':
                     console.log('Processing GET_TRANSCRIPT for link:', request.link);
                     const segments = await getSmartSegments(request.link);
-                    console.log('Final processed segments:', segments.length);
                     return segments;
+
+                case 'GET_STORED_TRANSCRIPT':
+                    const stored = await chrome.storage.local.get(`transcript_${request.videoId}`);
+                    return stored[`transcript_${request.videoId}`] || null;
 
                 default:
                     throw new Error('Unknown message type');
@@ -186,5 +223,5 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         .then(response => sendResponse(response))
         .catch(error => sendResponse({ error: error.message }));
 
-    return true;
+    return true; // Keep the message channel open for async response
 });

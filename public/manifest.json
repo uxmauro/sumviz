@@ -3,8 +3,10 @@
   "version": "0.1.0",
   "name": "Sumviz",
   "description": "Get Transcripts, concise summaries and translations of YouTube videos.",
-  "permissions": [  "activeTab",
-  "scripting"
+  "permissions": [
+    "activeTab",
+    "scripting",
+    "storage"
   ],
 
   "content_scripts": [

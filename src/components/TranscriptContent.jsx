@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Clock } from 'lucide-react';
 import "./ResizableColumn.css";
 
 
@@ -164,9 +164,7 @@ const TranscriptContent = () => {
         return (
           <div
             key={index}
-            className={`p-2 cursor-pointer hover:bg-gray-100 transition-colors ${
-              isCurrentSegment ? 'bg-blue-50' : ''
-            }`}
+        
             onClick={() => {
               const video = document.querySelector('video');
               if (video) {
@@ -176,8 +174,9 @@ const TranscriptContent = () => {
           >
             <div className="time-stamp">
               {formatTime(segment.start)}
+              <Clock size={20}/>
             </div>
-            <p style={{ fontSize: '16px' }}>
+            <p className='transcript-text'>
               {segment.text}
             </p>
           </div>
