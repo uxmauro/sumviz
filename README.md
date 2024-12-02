@@ -11,7 +11,7 @@ sumViz is designed for users who want to quickly grasp the main points of YouTub
 The following features are planned for future releases:
 
 - [ ] Video Summarization
-- [ ] Video Transcript
+- [x] Video Transcript
 - [ ] Translate Video Transcript
 - [ ] Chat With Video
 - [ ] Customization Options
