@@ -191,6 +191,49 @@ async function getSmartSegments(link) {
     }
 }
 
+// Listen for tab updates to detect when a YouTube video page is loaded
+chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
+    // Only proceed if the page has finished loading and it's a YouTube video URL
+    if (changeInfo.status === 'complete' && tab.url?.includes('youtube.com/watch')) {
+        try {
+            const videoId = getVideoIdFromLink(tab.url);
+            if (!videoId) return;
+
+            console.log('YouTube video page loaded, fetching transcript for:', videoId);
+            
+            // Get available language options
+            const langOptions = await getLangOptionsWithLink(videoId);
+            if (langOptions.length === 0) {
+                console.log('No captions available for this video');
+                return;
+            }
+
+            // Use the first available language option
+            const firstLangOption = langOptions[0];
+            console.log('Auto-fetching transcript in language:', firstLangOption.language);
+            
+            // Get the transcript
+            const segments = await getSmartSegments(firstLangOption.link);
+            
+            // Store the transcript
+            await chrome.storage.local.set({
+                [`transcript_${videoId}`]: segments
+            });
+            
+            console.log('Transcript automatically fetched and stored');
+            
+            // Notify the content script that the transcript is ready
+            chrome.tabs.sendMessage(tabId, {
+                type: 'TRANSCRIPT_READY',
+                videoId: videoId
+            });
+            
+        } catch (error) {
+            console.error('Error auto-fetching transcript:', error);
+        }
+    }
+});
+
 // Message handler remains the same
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     const handleMessage = async () => {

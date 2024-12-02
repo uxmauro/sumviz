@@ -36,7 +36,8 @@
 .toggleBtn{
 
     height: fit-content;
-    background-color: #848484;
+    background-color: #D4D3F0;
+    color: #2518E0;
     padding: 1px;
     display: flex;
     align-items: center;

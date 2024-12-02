@@ -32,6 +32,22 @@ const TranscriptContent = () => {
     try {
       console.log('Fetching transcript for video:', videoId);
 
+      // First check if we have a stored transcript
+      const storedTranscript = await new Promise((resolve) => {
+        chrome.runtime.sendMessage({
+          type: 'GET_STORED_TRANSCRIPT',
+          videoId: videoId
+        }, resolve);
+      });
+
+      if (storedTranscript) {
+        console.log('Using stored transcript');
+        setTranscriptData(storedTranscript);
+        setLoading(false);
+        return;
+      }
+
+      // If no stored transcript, proceed with regular fetching
       // Check if chrome.runtime is available
       if (!chrome?.runtime?.sendMessage) {
         throw new Error('Chrome runtime not available');
@@ -99,6 +115,17 @@ const TranscriptContent = () => {
       }
     };
 
+    // Listen for TRANSCRIPT_READY messages
+    const handleMessage = (message) => {
+      if (message.type === 'TRANSCRIPT_READY') {
+        console.log('Received TRANSCRIPT_READY message');
+        fetchTranscript(message.videoId);
+      }
+    };
+
+    // Add message listener
+    chrome.runtime.onMessage.addListener(handleMessage);
+
     // Check if we're in a Chrome extension context
     if (typeof chrome === 'undefined' || !chrome.runtime) {
       setError('This component must be run within a Chrome extension');
@@ -112,7 +139,11 @@ const TranscriptContent = () => {
     const observer = new MutationObserver(checkForVideo);
     observer.observe(document.querySelector('title'), { subtree: true, characterData: true });
 
-    return () => observer.disconnect();
+    // Cleanup listener on unmount
+    return () => {
+      observer.disconnect();
+      chrome.runtime.onMessage.removeListener(handleMessage);
+    };
   }, []);
 
   // Update current time
@@ -161,26 +192,25 @@ const TranscriptContent = () => {
           currentTime >= segment.start && 
           currentTime < (segment.start + segment.duration);
         
-        return (
-          <div
-            key={index}
-        
-            onClick={() => {
-              const video = document.querySelector('video');
-              if (video) {
-                video.currentTime = segment.start;
-              }
-            }}
-          >
-            <div className="time-stamp">
-              {formatTime(segment.start)}
-              <Clock size={20}/>
+          return (
+            <div key={index}>
+              <div 
+                className="time-stamp"
+                onClick={() => {
+                  const video = document.querySelector('video');
+                  if (video) {
+                    video.currentTime = segment.start;
+                  }
+                }}
+              >
+                {formatTime(segment.start)}
+                <Clock size={20}/>
+              </div>
+              <p className='transcript-text'>
+                {segment.text}
+              </p>
             </div>
-            <p className='transcript-text'>
-              {segment.text}
-            </p>
-          </div>
-        );
+          );
       })}
     </div>
   );

@@ -12,10 +12,11 @@ const ResizableColumn = () => {
   const initialBottomHeight = useRef(50);
 
   const handleMouseDown = (e) => {
+    e.preventDefault();
     startY.current = e.clientY;
     initialTopHeight.current = topHeight;
     initialBottomHeight.current = bottomHeight;
-
+    document.body.style.cursor = 'grabbing';
     document.addEventListener("mousemove", handleMouseMove);
     document.addEventListener("mouseup", handleMouseUp);
   };
@@ -35,6 +36,7 @@ const ResizableColumn = () => {
   };
 
   const handleMouseUp = () => {
+    document.body.style.cursor = '';
     document.removeEventListener("mousemove", handleMouseMove);
     document.removeEventListener("mouseup", handleMouseUp);
   };

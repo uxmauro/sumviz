@@ -5,6 +5,7 @@
   "description": "Get Transcripts, concise summaries and translations of YouTube videos.",
   "permissions": [
     "activeTab",
+    "tabs",
     "scripting",
     "storage"
   ],

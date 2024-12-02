@@ -21,9 +21,12 @@ const Chat = ({ height, children }) => {
     <div className="bottom" style={{ height }}>
           <div className="inner-header" onClick={toggleChat}>
         <h1>Chat</h1>
-        <div className="toggleBtn">
-          {/* {isActive ? <LucidePlus size={20} /> : <LucideMinus size={20} />} */}
-        </div>
+        {/* <div className="toggleBtn">
+          {isActive ? <LucidePlus size={20} /> : <LucideMinus size={20} />}
+        </div> */}
+      </div>
+      <div className="chat-area">
+      
       </div>
     <textarea className="chat-input-field"     value={inputText}
         onChange={handleInputChange} type="text" placeholder="Ask anything" />
