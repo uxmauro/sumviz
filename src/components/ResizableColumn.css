@@ -14,6 +14,7 @@
     background: linear-gradient(180deg, #ddd  1.44%, #fff 98.92%);
     box-sizing: border-box;
     border-radius: 16px;
+    box-shadow: inset 0px -1px 14px #ddd;
     overflow-y: scroll;
   }
 

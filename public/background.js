@@ -1,3 +1,6 @@
+const MAX_CHARACTERS = 4000;
+const MAX_CHUNK_SIZE = 3500;
+
 async function getLangOptionsWithLink(videoId) {
     try {
         console.log('Fetching video page for ID:', videoId);
@@ -14,8 +17,6 @@ async function getLangOptionsWithLink(videoId) {
         }
         
         const captionsSection = splittedHtml[1].split(',"videoDetails')[0].replace("\n", "");
-        console.log('Captions JSON:', captionsSection);
-
         const captions_json = JSON.parse(captionsSection);
         const captionTracks = captions_json.playerCaptionsTracklistRenderer.captionTracks;
         
@@ -34,7 +35,6 @@ async function getLangOptionsWithLink(videoId) {
 
 async function parseXMLText(xmlText) {
     console.log('Raw XML text length:', xmlText.length);
-    console.log('First 500 chars of XML:', xmlText.substring(0, 500));
     
     const segments = [];
     // Match complete <text> elements with their attributes and content
@@ -47,14 +47,7 @@ async function parseXMLText(xmlText) {
         count++;
         const [_, start, duration, text] = match;
         
-        if (count <= 5) {
-            console.log('Processing segment:', {
-                start,
-                duration,
-                text: text.substring(0, 50) + (text.length > 50 ? '...' : '')
-            });
-        }
-        
+    
         const processedText = text
             .replace(/&amp;/g, '&')
             .replace(/&lt;/g, '<')
@@ -90,7 +83,6 @@ async function getRawTranscript(link) {
     }
 }
 
-// Helper function to get video ID from a transcript link
 function getVideoIdFromLink(link) {
     try {
         const url = new URL(link);
@@ -190,51 +182,114 @@ async function getSmartSegments(link) {
         throw error;
     }
 }
+// Keep track of processed video IDs to avoid duplicate processing
+const processedVideos = new Set();
+
+// Function to handle video processing
+async function processVideo(tabId, videoId) {
+    console.log('Processing video:', videoId);
+    try {
+        const firstLangOption = await getLangOptionsWithLink(videoId);
+        if (!firstLangOption) {
+            console.log('No transcript available for video:', videoId);
+            return;
+        }
+
+        const segments = await getSmartSegments(firstLangOption[0].link);
+        
+        // Store the transcript
+        await chrome.storage.local.set({
+            [`transcript_${videoId}`]: segments
+        });
+        
+        console.log('Transcript automatically fetched and stored');
+        
+        // Notify the content script that the transcript is ready
+        try {
+            const tab = await chrome.tabs.get(tabId);
+            if (tab && tab.status === 'complete') {
+                await chrome.tabs.sendMessage(tabId, {
+                    type: 'TRANSCRIPT_READY',
+                    videoId: videoId
+                });
+                console.log('Transcript ready message sent to content script');
+            }
+        } catch (error) {
+            console.error('Error sending message to content script:', error);
+        }
+    } catch (error) {
+        console.error('Error auto-fetching transcript:', error);
+    }
+}
 
 // Listen for tab updates to detect when a YouTube video page is loaded
+// chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
+//     // Only proceed if the page has finished loading and it's a YouTube video URL
+//     if (tab.url?.includes('youtube.com/watch')) {
+//         try {
+//             const videoId = getVideoIdFromLink(tab.url);
+//             if (!videoId) return;
+
+//             console.log('YouTube video page loaded, fetching transcript for:', videoId);
+            
+//             // Get available language options
+//             const langOptions = await getLangOptionsWithLink(videoId);
+//             if (langOptions.length === 0) {
+//                 console.log('No captions available for this video');
+//                 return;
+//             }
+
+//             // Use the first available language option
+//             const firstLangOption = langOptions[0];
+//             console.log('Auto-fetching transcript in language:', firstLangOption.language);
+            
+//             // Get the transcript
+//             const segments = await getSmartSegments(firstLangOption.link);
+            
+//             // Store the transcript
+//             await chrome.storage.local.set({
+//                 [`transcript_${videoId}`]: segments
+//             });
+            
+//             console.log('Transcript automatically fetched and stored');
+            
+//             // Notify the content script that the transcript is ready
+//             chrome.tabs.sendMessage(tabId, {
+//                 type: 'TRANSCRIPT_READY',
+//                 videoId: videoId
+//             });
+            
+//         } catch (error) {
+//             console.error('Error auto-fetching transcript:', error);
+//         }
+//     }
+// });
 chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
-    // Only proceed if the page has finished loading and it's a YouTube video URL
-    if (changeInfo.status === 'complete' && tab.url?.includes('youtube.com/watch')) {
-        try {
-            const videoId = getVideoIdFromLink(tab.url);
-            if (!videoId) return;
-
-            console.log('YouTube video page loaded, fetching transcript for:', videoId);
+    // Check if this is a YouTube video URL
+    if (tab.url?.includes('youtube.com/watch')) {
+        const videoId = new URL(tab.url).searchParams.get('v');
+        const processedKey = `${tabId}-${videoId}`;
+        
+        // Process if it's a new video or URL parameters changed
+        if (videoId && !processedVideos.has(processedKey)) {
+            console.log('New video detected:', videoId);
+            processedVideos.add(processedKey);
             
-            // Get available language options
-            const langOptions = await getLangOptionsWithLink(videoId);
-            if (langOptions.length === 0) {
-                console.log('No captions available for this video');
-                return;
+            // Only process when the page is fully loaded
+            if (changeInfo.status === 'complete') {
+                await processVideo(tabId, videoId);
             }
-
-            // Use the first available language option
-            const firstLangOption = langOptions[0];
-            console.log('Auto-fetching transcript in language:', firstLangOption.language);
-            
-            // Get the transcript
-            const segments = await getSmartSegments(firstLangOption.link);
-            
-            // Store the transcript
-            await chrome.storage.local.set({
-                [`transcript_${videoId}`]: segments
-            });
-            
-            console.log('Transcript automatically fetched and stored');
-            
-            // Notify the content script that the transcript is ready
-            chrome.tabs.sendMessage(tabId, {
-                type: 'TRANSCRIPT_READY',
-                videoId: videoId
-            });
-            
-        } catch (error) {
-            console.error('Error auto-fetching transcript:', error);
         }
+    }
+
+    // Clean up processed videos when leaving YouTube or closing tab
+    if (!tab.url?.includes('youtube.com/watch')) {
+        const videoIdsToRemove = Array.from(processedVideos)
+            .filter(id => id.startsWith(`${tabId}-`));
+        videoIdsToRemove.forEach(id => processedVideos.delete(id));
     }
 });
 
-// Message handler remains the same
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     const handleMessage = async () => {
         try {

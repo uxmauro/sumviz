@@ -1,5 +1,5 @@
 import "./Sumviz.css";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { LucidePlus, LucideMinus } from "lucide-react";
 import ResizableColumn from "./ResizableColumn";
 import logoMark from "../assets/logo-mark.svg";
@@ -7,6 +7,16 @@ import logoMark from "../assets/logo-mark.svg";
 const SumViz = () => {
   // State to control the toggle
   const [isActive, setIsActive] = useState(false);
+
+  // Listen for video changes
+  useEffect(() => {
+    const handleVideoChange = (event) => {
+      setIsActive(false);
+    };
+
+    window.addEventListener('videoChange', handleVideoChange);
+    return () => window.removeEventListener('videoChange', handleVideoChange);
+  }, []);
 
   // Toggle function to expand or collapse the div
   const toggleSumviz = () => {

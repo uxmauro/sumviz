@@ -84,7 +84,6 @@ const TranscriptContent = () => {
         link: langOptions[0].link
       });
 
-      console.log('Segments received:', segments);
 
       if (!segments || !Array.isArray(segments)) {
         setError('Invalid transcript data received');
