@@ -1,9 +1,14 @@
+const MAX_CHARACTERS = 4000;
+const MAX_CHUNK_SIZE = 3500;
+
 async function getLangOptionsWithLink(videoId) {
     try {
         console.log('Fetching video page for ID:', videoId);
-        const videoPageResponse = await fetch(
-            "https://www.youtube.com/watch?v=" + videoId
-        );
+        const videoPageResponse = await fetch("https://www.youtube.com/watch?v=" + videoId);
+        if (!videoPageResponse.ok) {
+            throw new Error(`Failed to fetch video page: ${videoPageResponse.status}`);
+        }
+        
         const videoPageHtml = await videoPageResponse.text();
         console.log('Video page HTML length:', videoPageHtml.length);
 
@@ -180,9 +185,22 @@ async function getSmartSegments(link) {
                 segments: combinedSegments,
                 timestamp: Date.now(),
                 videoId: videoId,
-                fullText: combinedSegments.map(seg => seg.text).join(' ') // This will be useful for chat
+                fullText: combinedSegments.map(seg => seg.text).join(' ')
             }
         });
+        
+        // Process and summarize the transcript text
+        const storedTranscript = await chrome.storage.local.get(`transcript_${videoId}`);
+        const processedChunks = summaryPreprocess(storedTranscript[`transcript_${videoId}`].fullText);
+        console.log('Processed transcript chunks:', processedChunks);
+        
+        // Generate and store summaries
+        try {
+            const summaries = await generateChunkSummaries(processedChunks, videoId);
+            console.log('Generated summaries:', summaries);
+        } catch (error) {
+            console.error('Failed to generate summaries:', error);
+        }
         
         return combinedSegments;
     } catch (error) {
@@ -191,47 +209,182 @@ async function getSmartSegments(link) {
     }
 }
 
+const splitIntoChunks = (text, chunkSize) => {
+  const chunks = [];
+  let startIndex = 0;
+
+  while (startIndex < text.length) {
+    chunks.push(text.slice(startIndex, startIndex + chunkSize));
+    startIndex += chunkSize;
+  }
+
+  return chunks;
+};
+
+const cleanText = (text) => {
+  let cleanedText = text;
+  cleanedText = cleanedText.replace(/\b(a|an|the|in|on|at|to|for|of|with|by|from|up|about|into|over|after)\b/gi, "");
+  cleanedText = cleanedText.replace(/very|really|extremely|absolutely/gi, "");
+  cleanedText = cleanedText.replace(/\s+/g, " ").trim();
+  cleanedText = cleanedText.replace(/\b\d{1,2}:\d{2}(?::\d{2})?\b/g, "");
+  cleanedText = cleanedText.replace(/\s*\n\s*/g, " ").trim();
+  return cleanedText;
+};
+
+const summaryPreprocess = (input) => {
+  const cleanedInput = cleanText(input);
+  const chunks = splitIntoChunks(cleanedInput, MAX_CHUNK_SIZE);
+  return chunks;
+};
+
+const checkSummarizerCapabilities = async () => {
+  if (!window.ai?.summarizer) {
+    console.log("AI Summarization is not supported");
+    return false;
+  }
+
+  let capabilities = await window.ai.summarizer.capabilities();
+  if (
+    capabilities.available === "readily" ||
+    capabilities.available === "after-download"
+  ) {
+    return true;
+  }
+
+  try {
+    await window.ai.summarizer.create();
+    capabilities = await window.ai.summarizer.capabilities();
+    return capabilities.available !== "no";
+  } catch {
+    return false;
+  }
+};
+
+const createSummarizer = async () => {
+  if (!(await checkSummarizerCapabilities())) {
+    throw new Error("AI Summarization is not supported");
+  }
+
+  return window.ai.summarizer.create({
+    type: "key-points",
+    format: "plain-text",
+    length: "short"
+  });
+};
+
+const generateChunkSummaries = async (chunks, videoId) => {
+  try {
+    let summaries = [];
+    for (let i = 0; i < chunks.length; i++) {
+      const chunk = chunks[i];
+      const summarizer = await createSummarizer();
+      const summary = await summarizer.summarize(chunk);
+      summarizer.destroy();
+      summaries.push(summary);
+      console.log(`Chunk ${i + 1}/${chunks.length} summarized:`, summary);
+    }
+
+    // Save summaries to storage
+    await chrome.storage.local.set({
+      [`summaries_${videoId}`]: {
+        summaries,
+        timestamp: Date.now(),
+        videoId: videoId
+      }
+    });
+
+    console.log('All summaries generated and saved for video:', videoId);
+    return summaries;
+  } catch (error) {
+    console.error('Error generating summaries:', error);
+    throw error;
+  }
+};
+
+// Keep track of processed video IDs to avoid duplicate processing
+const processedVideos = new Set();
+
+// Function to handle video processing
+async function processVideo(tabId, videoId) {
+    console.log('Processing video:', videoId);
+    try {
+        const firstLangOption = await getLangOptionsWithLink(videoId);
+        if (!firstLangOption) {
+            console.log('No transcript available for video:', videoId);
+            return;
+        }
+
+        const segments = await getSmartSegments(firstLangOption[0].link);
+        
+        // Store the transcript
+        await chrome.storage.local.set({
+            [`transcript_${videoId}`]: segments
+        });
+        
+        console.log('Transcript automatically fetched and stored');
+        
+        // Notify the content script that the transcript is ready
+        try {
+            const tab = await chrome.tabs.get(tabId);
+            if (tab && tab.status === 'complete') {
+                await chrome.tabs.sendMessage(tabId, {
+                    type: 'TRANSCRIPT_READY',
+                    videoId: videoId
+                });
+                console.log('Transcript ready message sent to content script');
+            }
+        } catch (error) {
+            console.error('Error sending message to content script:', error);
+        }
+    } catch (error) {
+        console.error('Error auto-fetching transcript:', error);
+    }
+}
+
 // Listen for tab updates to detect when a YouTube video page is loaded
 chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
-    // Only proceed if the page has finished loading and it's a YouTube video URL
-    if (changeInfo.status === 'complete' && tab.url?.includes('youtube.com/watch')) {
-        try {
-            const videoId = getVideoIdFromLink(tab.url);
-            if (!videoId) return;
-
-            console.log('YouTube video page loaded, fetching transcript for:', videoId);
+    // Check if this is a YouTube video URL
+    if (tab.url?.includes('youtube.com/watch')) {
+        const videoId = new URL(tab.url).searchParams.get('v');
+        const processedKey = `${tabId}-${videoId}`;
+        
+        // Process if it's a new video or URL parameters changed
+        if (videoId && !processedVideos.has(processedKey)) {
+            console.log('New video detected:', videoId);
+            processedVideos.add(processedKey);
             
-            // Get available language options
-            const langOptions = await getLangOptionsWithLink(videoId);
-            if (langOptions.length === 0) {
-                console.log('No captions available for this video');
-                return;
+            // Only process when the page is fully loaded
+            if (changeInfo.status === 'complete') {
+                await processVideo(tabId, videoId);
             }
-
-            // Use the first available language option
-            const firstLangOption = langOptions[0];
-            console.log('Auto-fetching transcript in language:', firstLangOption.language);
-            
-            // Get the transcript
-            const segments = await getSmartSegments(firstLangOption.link);
-            
-            // Store the transcript
-            await chrome.storage.local.set({
-                [`transcript_${videoId}`]: segments
-            });
-            
-            console.log('Transcript automatically fetched and stored');
-            
-            // Notify the content script that the transcript is ready
-            chrome.tabs.sendMessage(tabId, {
-                type: 'TRANSCRIPT_READY',
-                videoId: videoId
-            });
-            
-        } catch (error) {
-            console.error('Error auto-fetching transcript:', error);
         }
     }
+
+    // Clean up processed videos when leaving YouTube or closing tab
+    if (!tab.url?.includes('youtube.com/watch')) {
+        const videoIdsToRemove = Array.from(processedVideos)
+            .filter(id => id.startsWith(`${tabId}-`));
+        videoIdsToRemove.forEach(id => processedVideos.delete(id));
+    }
+});
+
+// Listen for YouTube's history state changes (client-side navigation)
+chrome.webNavigation.onHistoryStateUpdated.addListener(async (details) => {
+    if (details.url.includes('youtube.com/watch')) {
+        const videoId = new URL(details.url).searchParams.get('v');
+        const processedKey = `${details.tabId}-${videoId}`;
+        
+        if (videoId && !processedVideos.has(processedKey)) {
+            console.log('History state updated, new video:', videoId);
+            processedVideos.add(processedKey);
+            await processVideo(details.tabId, videoId);
+        }
+    }
+}, {
+    url: [{
+        hostEquals: 'www.youtube.com',
+        pathContains: 'watch'
+    }]
 });
 
 // Message handler remains the same
@@ -257,14 +410,29 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                     throw new Error('Unknown message type');
             }
         } catch (error) {
-            console.error('Error in message handler:', error);
-            throw error;
+            console.error('Detailed error in message handler:', {
+                message: error.message,
+                stack: error.stack,
+                requestType: request.type
+              });
+              throw error;
         }
     };
 
     handleMessage()
-        .then(response => sendResponse(response))
-        .catch(error => sendResponse({ error: error.message }));
-
+    .then(response => {
+        try {
+          sendResponse(response);
+        } catch (responseError) {
+          console.error('Error sending response:', responseError);
+        }
+      })
+      .catch(error => {
+        try {
+          sendResponse({ error: error.message });
+        } catch (sendError) {
+          console.error('Error sending error response:', sendError);
+        }
+      });
     return true; // Keep the message channel open for async response
 });
