@@ -1,6 +1,6 @@
 # SumViz Chrome Extension
 
-SumViz is an experimental Chrome extension currently in development, focused on generating concise summaries of YouTube videos. By leveraging Chrome APIs and AI technology, SumViz aims to enhance the way users consume video content by providing quick insights without the need to watch entire videos.
+SumViz is an experimental Chrome extension currently in development, focused on generating concise summaries of YouTube videos. By leveraging Chrome APIs and AI technology, SumViz aims to enhance the way users consume video content by providing quick insights without the need to watch entire videos. SumViz is presently limited to use with Google Chrome Canary only
 
 ## Overview
 
