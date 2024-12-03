@@ -1,5 +1,3 @@
-
-
 async function getLangOptionsWithLink(videoId) {
     try {
         console.log('Fetching video page for ID:', videoId);
@@ -308,6 +306,12 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                 case 'GET_STORED_TRANSCRIPT':
                     const stored = await chrome.storage.local.get(`transcript_${request.videoId}`);
                     return stored[`transcript_${request.videoId}`] || null;
+
+                case 'SUMMARY_READY':
+                    console.log('Summary ready for video:', request.videoId);
+                    // Store the summary in local storage if not already stored
+                    await chrome.storage.local.set({ [`summary_${request.videoId}`]: request.summary });
+                    return { success: true };
 
                 default:
                     throw new Error('Unknown message type');

@@ -18,17 +18,10 @@ function insertSumViz() {
 
 const getTranscriptText = () => {
   return new Promise((resolve, reject) => {
-    // Try to retrieve the transcript text from local storage first
-    const storedTranscript = localStorage.getItem('transcriptText');
+    // Clear any old transcript from localStorage
+    localStorage.removeItem('transcriptText');
     
-    if (storedTranscript) {
-      // If found in local storage, resolve with it
-      console.log("Transcript retrieved from local storage.");
-      resolve(storedTranscript);
-      return;
-    }
-
-    // Wait for the transcript to load (increase timeout if needed)
+    // Wait for the transcript to load
     const timeout = setTimeout(() => {
       // Select all p elements with the class 'transcript-text'
       const transcriptElements = document.querySelectorAll('p.transcript-text');
@@ -37,9 +30,6 @@ const getTranscriptText = () => {
         const transcriptText = Array.from(transcriptElements)
           .map(el => el.innerText.trim())
           .join(' ');
-
-        // Save the transcript to local storage for future use
-        localStorage.setItem('transcriptText', transcriptText);
 
         console.log("Transcript scraped from the page.");
         resolve(transcriptText); // Resolve with the transcript text
@@ -62,24 +52,36 @@ const getTranscriptText = () => {
 
 
 
-
 (async () => {
   try {
-    const inputText = await getTranscriptText();  // Await the promise to get the transcript text
+    const inputText = await getTranscriptText();
+    const videoId = extractVideoId(window.location.href);
 
-    // Once you have the inputText, call generateSummary
+    // Clear any existing summary for this video
+    await new Promise((resolve) => {
+      chrome.storage.local.remove([`summary_${videoId}`], resolve);
+    });
+
+    // Generate new summary
     await generateSummary(inputText).then(summary => {
       console.log("Generated summary:", summary);
-      chrome.storage.local.set({ 'videoSummary': summary }, () => {
-        console.log('Summary saved successfully!');
+
+      // Save summary with the video ID
+      const videoSummary = { videoId, summary };
+      chrome.storage.local.set({ [`summary_${videoId}`]: videoSummary }, () => {
+        console.log('Summary saved successfully for video:', videoId);
+        // Message Chat
+        chrome.runtime.sendMessage({
+          type: 'SUMMARY_READY',
+          summary: summary,
+          videoId: videoId,
+        });
       });
     });
   } catch (error) {
     console.error("Error fetching transcript or generating summary:", error);
   }
 })();
-
-
 
 // Add message listener for background script communication
 chrome.runtime.onMessage.addListener((message, sender) => {
