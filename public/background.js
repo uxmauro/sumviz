@@ -1,5 +1,4 @@
-const MAX_CHARACTERS = 4000;
-const MAX_CHUNK_SIZE = 3500;
+
 
 async function getLangOptionsWithLink(videoId) {
     try {
@@ -264,6 +263,8 @@ async function processVideo(tabId, videoId) {
 //         }
 //     }
 // });
+
+
 chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
     // Check if this is a YouTube video URL
     if (tab.url?.includes('youtube.com/watch')) {
