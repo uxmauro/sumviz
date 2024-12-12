@@ -45,7 +45,7 @@ const ResizableColumn = () => {
     <div className="container">
       <Transcript height={`${topHeight}%`} innerHeight={`${topHeight}%`} />
       <Drag onMouseDown={handleMouseDown} />
-      <Chat height={`${bottomHeight}%`} />
+      <Chat  height={`${bottomHeight}%`} />
     </div>
   );
 };

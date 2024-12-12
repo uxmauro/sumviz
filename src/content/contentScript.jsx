@@ -1,5 +1,5 @@
 import { createRoot } from "react-dom/client";
-import { generateSummary } from './summarizer.js';
+// import { generateSummary } from './summarizer.js';
 import SumViz from "../components/SumViz";
 
 
@@ -51,7 +51,7 @@ const getTranscriptText = () => {
 
 
 
-
+/* 
 (async () => {
   try {
     const inputText = await getTranscriptText();
@@ -81,7 +81,7 @@ const getTranscriptText = () => {
   } catch (error) {
     console.error("Error fetching transcript or generating summary:", error);
   }
-})();
+})(); */
 
 // Add message listener for background script communication
 chrome.runtime.onMessage.addListener((message, sender) => {

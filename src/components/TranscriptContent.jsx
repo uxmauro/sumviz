@@ -159,7 +159,7 @@ const TranscriptContent = () => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center p-4">
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%'}} >
         <Loader2 className="animate-spin" />
       </div>
     );

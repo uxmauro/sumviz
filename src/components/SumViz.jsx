@@ -8,6 +8,7 @@ const SumViz = () => {
   // State to control the toggle
   const [isActive, setIsActive] = useState(false);
 
+
   // Listen for video changes
   useEffect(() => {
     const handleVideoChange = (event) => {

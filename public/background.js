@@ -99,7 +99,7 @@ async function getSmartSegments(link) {
         }
 
         // Check if we already have this transcript
-        const stored = await chrome.storage.local.get(`transcript_${videoId}`);
+        const stored = await chrome.storage.session.get(`transcript_${videoId}`);
         if (stored[`transcript_${videoId}`]) {
             console.log('Using stored transcript');
             return stored[`transcript_${videoId}`].segments;
@@ -164,7 +164,7 @@ async function getSmartSegments(link) {
         console.log('Sample combined segments:', combinedSegments.slice(0, 3));
         
         // Store the processed transcript
-        await chrome.storage.local.set({
+        await chrome.storage.session.set({
             [`transcript_${videoId}`]: {
                 segments: combinedSegments,
                 timestamp: Date.now(),
@@ -195,7 +195,7 @@ async function processVideo(tabId, videoId) {
         const segments = await getSmartSegments(firstLangOption[0].link);
         
         // Store the transcript
-        await chrome.storage.local.set({
+        await chrome.storage.session.set({
             [`transcript_${videoId}`]: segments
         });
         
@@ -244,7 +244,7 @@ async function processVideo(tabId, videoId) {
 //             const segments = await getSmartSegments(firstLangOption.link);
             
 //             // Store the transcript
-//             await chrome.storage.local.set({
+//             await chrome.storage.session.set({
 //                 [`transcript_${videoId}`]: segments
 //             });
             
@@ -304,14 +304,14 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                     return segments;
 
                 case 'GET_STORED_TRANSCRIPT':
-                    const stored = await chrome.storage.local.get(`transcript_${request.videoId}`);
+                    const stored = await chrome.storage.session.get(`transcript_${request.videoId}`);
                     return stored[`transcript_${request.videoId}`] || null;
 
-                case 'SUMMARY_READY':
-                    console.log('Summary ready for video:', request.videoId);
-                    // Store the summary in local storage if not already stored
-                    await chrome.storage.local.set({ [`summary_${request.videoId}`]: request.summary });
-                    return { success: true };
+                // case 'SUMMARY_READY':
+                //     console.log('Summary ready for video:', request.videoId);
+                //     // Store the summary in local storage if not already stored
+                //     // await chrome.storage.session.set({ [`summary_${request.videoId}`]: request.summary });
+                //     return { success: true };
 
                 default:
                     throw new Error('Unknown message type');
